@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/ASUS/OneDrive/Desktop/Test31.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="1921"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="Data_retail" custom_title="0" dock_id="4" table="4,11:mainData_retail"/><dock_state state="000000ff00000000fd0000000100000002000005f4000002aefc0100000004fb000000160064006f0063006b00420072006f00770073006500310100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000000005f40000000000000000fb000000160064006f0063006b00420072006f00770073006500330100000000ffffffff0000000000000000fb000000160064006f0063006b00420072006f00770073006500340100000000ffffffff0000011800ffffff000002580000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1*">select * from Data_retail;
+
+---1---
+
+WITH AVG_Price_Cat AS (
+    SELECT 
+        [Product ID],
+        [Product Name],
+        [Category],
+        [Price],
+        AVG([Price]) OVER (PARTITION BY [Category]) AS avg_price
+    FROM Data_retail
+    order by AVG([Price]) OVER (PARTITION BY [Category]) DESC
+)
+
+--select * from AVG_Price_Cat
+
+SELECT 
+    [Product ID],
+    [Product Name],
+    [Category],
+    [Price],
+    avg_price
+FROM AVG_Price_Cat
+WHERE [Price] &gt; avg_price
+ORDER BY [Price] DESC;
+
+---2
+
+SELECT 
+    [Category], 
+    AVG([Rating]) AS AVG_Rating_Per_Category
+FROM Data_retail
+GROUP BY [Category]
+ORDER BY AVG_Rating_Per_Category DESC;
+
+--3
+
+WITH RankedProducts AS (
+    SELECT 
+        [Product ID],
+        [Product Name],
+        [Warehouse],
+        [Reviews],
+        row_number() OVER (PARTITION BY [Warehouse] ORDER BY [Reviews] DESC) AS review_rank
+    FROM Data_retail
+)
+
+--select * from RankedProducts
+
+SELECT 
+    [Product ID],
+    [Product Name],
+    [Warehouse],
+    [Reviews]
+FROM RankedProducts
+WHERE review_rank = 1;
+
+---4
+
+WITH AVG_Price_Cat AS (
+    SELECT 
+        [Product ID],
+        [Product Name],
+        [Category],
+        [Discount],
+        [Supplier],
+        [Price],
+        AVG([Price]) OVER (PARTITION BY [Category]) AS avg_price
+    FROM Data_retail
+)
+SELECT 
+    [Product ID],
+    [Product Name],
+    [Category],
+    [Discount],
+    [Supplier],
+    [Price],
+    avg_price
+FROM AVG_Price_Cat
+WHERE [Price] &gt; avg_price
+ORDER BY [Price] DESC;
+
+--5
+
+-- Step 1: Get average rating per product using a window function
+WITH AvgRatings AS (
+    SELECT
+        [Product ID],
+        [Product Name],
+        [Category],
+        AVG([Rating]) OVER (
+            PARTITION BY [Product ID], [Product Name], [Category]
+        ) AS avg_rating_per_product
+    FROM Data_retail
+),
+
+-- Step 2: Rank the products by their average rating within each category
+RankedProducts AS (
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY [Category]
+            ORDER BY avg_rating_per_product DESC
+        ) AS rating_rank
+    FROM AvgRatings
+)
+
+-- Step 3: Get top 2
+SELECT DISTINCT
+    [Product ID],
+    [Product Name],
+    [Category],
+    avg_rating_per_product,
+    rating_rank
+FROM RankedProducts
+WHERE rating_rank &lt;= 2;
+
+--6
+
+SELECT 
+    [Return Policy],
+    COUNT(*) AS product_count,
+    AVG([Stock Quantity]) AS avg_stock,
+    SUM([Stock Quantity]) AS total_stock,
+    SUM([Rating] * [Stock Quantity]) * 1.0 / NULLIF(SUM([Stock Quantity]), 0) AS weighted_avg_rating
+FROM Data_retail
+GROUP BY [Return Policy]
+ORDER BY product_count DESC;
+
+
+
+
+
+
+
+
+
+
+
+
+
+</sql><current_tab id="0"/></tab_sql></sqlb_project>
